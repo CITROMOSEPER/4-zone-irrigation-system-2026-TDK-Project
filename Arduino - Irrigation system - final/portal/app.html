@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f2f6f3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a120d" media="(prefers-color-scheme: dark)">
+<title>Irrigation</title>
+<!-- Controller UI (station mode). Same look as the setup page; talks to the ESP only through /api/*. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231a7f44'/%3E%3Cpath d='M16 26V14' stroke='%23fff' stroke-width='2.2' stroke-linecap='round'/%3E%3Cpath fill='%23fff' d='M16 20C11 20 8 17 8 11c5 0 8 3 8 9zM16 16c0-5 3-8 8-8 0 5-3 8-8 8z'/%3E%3C/svg%3E">
+<style>
+/* Tokens. Light first, dark via prefers-color-scheme. */
+:root{--bg:#f2f6f3;--card:#fff;--tx:#0f2216;--t2:#5b6e61;--sp:rgba(15,34,22,.12);--g:#1a7f44;--on:#fff;--tint:#d9efe0;--hb:rgba(242,246,243,.78);--er:#c4281c;--wb:#fdecea;--sh:rgba(26,127,68,.3);--bl:#0a62c9;--bt:#e3effd;--wn:#9a5600;--oe:#fff}
+@media(prefers-color-scheme:dark){:root{--bg:#0a120d;--card:#152019;--tx:#e9f5ed;--t2:#8ea697;--sp:rgba(255,255,255,.13);--g:#3fcf7c;--on:#04210f;--tint:#12301f;--hb:rgba(10,18,13,.72);--er:#ff8a80;--wb:#3a1a18;--sh:rgba(0,0,0,.45);--bl:#6bb6ff;--bt:#10253d;--wn:#ffb454;--oe:#3a0a07}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;background:radial-gradient(90% 50% at 50% -8%,var(--tint),transparent 70%),var(--bg);color:var(--tx);font:1.0625rem/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit;margin:0}
+button{-webkit-appearance:none;appearance:none;cursor:pointer;touch-action:manipulation}
+a{color:inherit}
+[hidden]{display:none!important}
+header{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;height:52px;height:calc(52px + env(safe-area-inset-top));padding:0 16px;padding-top:env(safe-area-inset-top);padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right));background:var(--hb);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);transition:box-shadow .2s}
+header.sc{box-shadow:0 1px 0 var(--sp)}
+@supports not ((-webkit-backdrop-filter:a) or (backdrop-filter:a)){header{background:var(--bg)}}
+main{max-width:30rem;margin:0 auto;padding:0 16px 40px;padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+.ib{display:flex;align-items:center;border:0;background:none;color:var(--g);height:44px;padding:0 8px 0 0;margin-left:-4px;font-size:1.0625rem}
+.ib svg{margin-right:6px}
+.hid{visibility:hidden}
+.seg{display:flex;background:var(--sp);border-radius:10px;padding:2px}
+.seg button{border:0;background:none;color:var(--t2);min-width:40px;height:32px;border-radius:8px;font-size:.75rem;font-weight:600;letter-spacing:.05em;transition:background .2s,color .2s}
+.seg button[aria-pressed=true]{background:var(--card);color:var(--tx);box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.seg button:disabled{opacity:.4;cursor:default}
+.seg.wide{margin:0 16px 12px}
+.small.cx{margin:-4px 16px 10px}
+.seg.wide button{flex:1;letter-spacing:0;font-size:.8125rem;padding:0 4px}
+.v{display:none}
+.v.on{display:block;animation:in .42s cubic-bezier(.2,.8,.2,1) both}
+.v.on.bk{animation-name:ib}
+@keyframes in{from{opacity:0;transform:translateX(28px)}}
+@keyframes ib{from{opacity:0;transform:translateX(-28px)}}
+@keyframes fd{from{opacity:0}}
+@keyframes rt{to{transform:rotate(360deg)}}
+h1{font-size:2rem;line-height:1.1;letter-spacing:-.022em;font-weight:700;margin:12px 0 4px}
+.meta{color:var(--t2);margin:0 0 16px;font-size:1rem;min-height:1.4em;font-variant-numeric:tabular-nums}
+.meta.w{color:var(--bl)}
+.lb{font-size:.8125rem;letter-spacing:.02em;text-transform:uppercase;color:var(--t2);margin:22px 16px 8px}
+.list{background:var(--card);border-radius:14px;overflow:hidden;margin:0 0 12px}
+.row,.fl,.zc{position:relative;display:flex;align-items:center;width:100%;min-height:50px;padding:0 16px;border:0;background:none;text-align:left;text-decoration:none;color:inherit}
+.row+.row:before,.fl+.fl:before,.zc+.zc:before,.row+.fl:before,.fl+.row:before,.zc+.row:before,.cx+.row:before{content:"";position:absolute;top:0;left:16px;right:0;height:1px;background:var(--sp)}
+button.row,a.row,.zc{transition:background .25s}
+button.row:active,a.row:active,.zc:active{background:var(--sp);transition:none}
+.row.st{cursor:default;color:var(--t2)}
+.row.cf{cursor:default}
+.nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vl{flex:none;margin-left:12px;color:var(--tx);font-variant-numeric:tabular-nums}
+.vl.m{color:var(--t2)}
+.go:after{content:"";flex:none;width:8px;height:8px;margin-left:12px;border:solid var(--t2);border-width:2px 2px 0 0;transform:rotate(45deg);opacity:.55}
+.spin{flex:none;width:20px;height:20px;margin-right:12px;border:2.5px solid var(--sp);border-top-color:var(--g);border-radius:50%;animation:rt .8s linear infinite}
+.fl label{flex:1}
+.sw input{-webkit-appearance:none;appearance:none;position:relative;flex:none;width:51px;height:31px;border-radius:16px;background:var(--sp);outline:0;transition:background .25s}
+.sw input:after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.3);transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.sw input:checked{background:var(--g)}
+.sw input:checked:after{transform:translateX(20px)}
+.sw input:focus-visible{box-shadow:0 0 0 3px var(--tint)}
+.btn{display:block;width:100%;height:52px;border:0;border-radius:14px;background:var(--g);color:var(--on);font-weight:600;letter-spacing:-.01em;transition:transform .12s ease-out,opacity .2s}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.35;transform:none;cursor:default}
+.btn.sec{background:var(--tint);color:var(--g)}
+.btn.stop{background:var(--er);color:var(--oe)}
+.pd{padding:0 16px 16px}
+.tl{border:0;background:none;color:var(--g);padding:12px 4px;font-size:1rem}
+.tl:active{opacity:.5}
+.small{font-size:.8125rem;line-height:1.45;letter-spacing:.01em;color:var(--t2);margin:8px 16px 12px}
+/* banners */
+.bn{display:flex;align-items:center;background:var(--wb);color:var(--er);border-radius:14px;padding:12px 16px;margin:0 0 10px;font-size:.9375rem;line-height:1.35}
+.bn.i{background:var(--bt);color:var(--bl)}
+.bn span{flex:1}
+.bn button{flex:none;margin-left:12px;padding:6px 0;border:0;background:none;color:inherit;font-weight:600;text-decoration:underline}
+/* zone cards */
+.zc{min-height:76px;padding-top:12px;padding-bottom:12px;gap:14px;overflow:hidden}
+.ring{flex:none;position:relative;width:48px;height:48px}
+.ring svg{width:48px;height:48px;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:4}
+.ring .tr{stroke:var(--sp)}
+.ring .fg{stroke:var(--g);stroke-linecap:round;transition:stroke-dasharray .6s}
+.ring b{position:absolute;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:.8125rem;font-weight:600;font-variant-numeric:tabular-nums}
+.zc.w .ring .fg{stroke:var(--bl)}
+.zb{flex:1;min-width:0}
+.zt{font-weight:600}
+.zs{font-size:.875rem;color:var(--t2);line-height:1.3}
+.zs.w{color:var(--bl)}
+.zs.wn{color:var(--wn)}
+.zc .pb{position:absolute;left:0;bottom:0;height:3px;width:0;background:var(--bl);transition:width 1s linear}
+/* controls */
+.stp{display:flex;align-items:center;gap:4px}
+.stp button{width:34px;height:34px;border:0;border-radius:50%;background:var(--sp);color:var(--tx);font-size:1.25rem;line-height:1;padding:0}
+.stp button:active{opacity:.5}
+.stp output{min-width:4.6em;text-align:center;font-variant-numeric:tabular-nums}
+.row input[type=time],.row input[type=date]{border:0;background:var(--sp);border-radius:8px;padding:5px 8px;min-height:34px;color:var(--tx);outline:0;font-variant-numeric:tabular-nums}
+.chips{display:flex;gap:8px;padding:14px 16px 12px}
+.chip{flex:1;height:40px;border:0;border-radius:10px;background:var(--sp);color:var(--tx);font-weight:600;font-size:.9375rem;padding:0}
+.chip[aria-pressed=true]{background:var(--g);color:var(--on)}
+.prog{height:8px;border-radius:4px;background:var(--sp);overflow:hidden;margin:18px 16px 8px}
+.prog i{display:block;height:100%;width:0;background:var(--bl);transition:width 1s linear}
+.wt{text-align:center;color:var(--bl);margin:0 16px 14px;font-variant-numeric:tabular-nums}
+.hr{min-height:56px;padding-top:8px;padding-bottom:8px}
+.hr .nm{white-space:normal}
+.hr .zt{color:var(--tx)}
+.ts{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translate(-50%,20px);max-width:90vw;background:var(--tx);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:.9375rem;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:9;text-align:center}
+.ts.on{opacity:1;transform:translate(-50%,0)}
+@media(prefers-reduced-motion:reduce){.v.on,.v.on.bk{animation-name:fd}.sw input:after,.zc,.ring .fg,.zc .pb,.prog i{transition:none}}
+@media(prefers-reduced-transparency:reduce){header{background:var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none}}
+@media(prefers-contrast:more){.list,.bn{outline:1px solid var(--t2)}.lb,.small,.zs,.meta{color:var(--tx)}}
+</style>
+</head>
+<body>
+<header id="hd">
+<button id="back" class="ib hid" type="button"><svg width="12" height="20" viewBox="0 0 12 20" aria-hidden="true"><path d="M10 2L2 10l8 8" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-t="back"></span></button>
+<div class="seg"><button id="lh" type="button">HU</button><button id="le" type="button">EN</button></div>
+</header>
+<main>
+<noscript><p class="meta">JavaScript is required / A JavaScript szükséges.</p></noscript>
+
+<section id="v1" class="v on">
+<h1 data-t="title"></h1>
+<p class="meta" id="meta"></p>
+<div id="bns"></div>
+<div class="lb" data-t="zones"></div>
+<div class="list" id="zl"><div class="row st"><span class="spin"></span><span class="nm" data-t="load"></span></div></div>
+<div class="lb" data-t="cond"></div>
+<div class="list" id="cl"></div>
+<div class="list">
+<button class="row go" id="gh" type="button"><span class="nm" data-t="hist"></span></button>
+<button class="row go" id="gs" type="button"><span class="nm" data-t="sys"></span></button>
+</div>
+</section>
+
+<section id="v2" class="v">
+<h1 id="zt"></h1>
+<p class="meta" id="zst"></p>
+<div class="lb" data-t="now"></div>
+<div class="list">
+<div id="wi">
+<div class="chips" id="ch"></div>
+<div class="pd"><button class="btn" id="ws" type="button" data-t="start"></button></div>
+</div>
+<div id="wr" hidden>
+<div class="prog"><i id="pg"></i></div>
+<p class="wt" id="wt"></p>
+<div class="pd"><button class="btn stop" id="wx" type="button" data-t="stop"></button></div>
+</div>
+</div>
+<div class="lb" data-t="set"></div>
+<div class="list">
+<div class="fl sw"><label for="ze" data-t="en"></label><input id="ze" type="checkbox"></div>
+<div class="row cf"><span class="nm" data-t="mode"></span></div>
+<div class="seg wide cx" id="ms"><button type="button" data-m="0" data-t="m0"></button><button type="button" data-m="1" data-t="m1" disabled></button><button type="button" data-m="2" data-t="m2" disabled></button></div>
+<p class="small cx" data-t="soon"></p>
+<div class="row cf"><span class="nm" data-t="runl"></span><span class="stp"><button type="button" id="rm" aria-label="-">&minus;</button><output id="rv"></output><button type="button" id="rp" aria-label="+">+</button></span></div>
+<div class="row cf"><label class="nm" for="zs1" data-t="ws"></label><input id="zs1" type="time"></div>
+<div class="row cf"><label class="nm" for="ze1" data-t="we"></label><input id="ze1" type="time"></div>
+<div class="row cf"><span class="nm" data-t="cold"></span><span class="stp"><button type="button" id="cm" aria-label="-">&minus;</button><output id="cv"></output><button type="button" id="cp" aria-label="+">+</button></span></div>
+<div class="row cf"><label class="nm" for="zc" data-t="cov"></label><input id="zc" type="date"><button class="tl" id="zcx" type="button" data-t="clr"></button></div>
+</div>
+<p class="small" data-t="covh"></p>
+<div class="list"><div class="row st"><span class="nm" data-t="soil"></span><span class="vl" id="sv"></span></div></div>
+</section>
+
+<section id="v3" class="v">
+<h1 data-t="sys"></h1>
+<div class="lb" data-t="safety"></div>
+<div class="list">
+<div class="fl sw"><label for="goff" data-t="alloff"></label><input id="goff" type="checkbox"></div>
+<div class="fl sw"><label for="gwin" data-t="winter"></label><input id="gwin" type="checkbox"></div>
+<div class="row cf"><span class="nm" data-t="frost"></span><span class="stp"><button type="button" id="fm" aria-label="-">&minus;</button><output id="fv"></output><button type="button" id="fp" aria-label="+">+</button></span></div>
+</div>
+<p class="small" data-t="gnote"></p>
+<div class="lb" data-t="ctrl"></div>
+<div class="list" id="sl"></div>
+<button id="sc" class="btn sec" type="button" data-t="setclk"></button>
+<div class="lb" data-t="data"></div>
+<div class="list">
+<a class="row go" href="/log.csv" download="irrigation-log.csv"><span class="nm" data-t="log"></span></a>
+<a class="row go" href="/health"><span class="nm" data-t="health"></span></a>
+</div>
+</section>
+
+<section id="v4" class="v">
+<h1 data-t="hist"></h1>
+<div id="hl"></div>
+</section>
+</main>
+<div id="ts" class="ts" role="status" aria-live="polite"></div>
+<script>
+(function(){
+var T={
+en:{title:"Irrigation",zones:"Zones",cond:"Conditions",load:"Loading…",temp:"Temperature",hum:"Humidity",tank:"Tank",rain:"Rain",pump:"Pump",ok:"OK",low:"Low",dry:"Dry",wet:"Wet",on:"On",off:"Off",fault:"Fault",hist:"History",sys:"System",back:"Back",zone:"Zone {0}",
+wtr:"Watering",left:"{0} left",done:"Done today",next:"Next {0}",queued:"Queued",wait:"Waiting: {0}",skip:"Skipped: {0}",skipn:"Skipped",dis:"Off",min:"{0} min",
+r_COLD:"too cold",r_RAIN:"rain",r_FROST:"frost",r_TANK_LOW:"tank low",r_ALL_OFF:"all off",r_WINTER:"winter mode",r_WINDOW_MISSED:"window missed",r_QUEUE_TIMEOUT:"waited too long",r_DAILY_LIMIT:"daily limit",r_VALVE_FAULT:"fault",r_PUMP_FAULT:"fault",
+sfault:"Sensor fault",now:"Water now",start:"Start watering",stop:"Stop",set:"Settings",en:"Enabled",mode:"Mode",m0:"Schedule",m1:"Closed loop",m2:"Open loop",soon:"The other modes are coming soon.",runl:"Run length",ws:"Window start",we:"Window end",cold:"Cold limit",cov:"Covered until",covh:"Covered plants get no rain credit: the rain stop is ignored until that date.",clr:"Clear",soil:"Soil moisture",
+saved:"Saved",e_save:"Could not save",e_win:"The window must end after it starts.",e_conn:"No connection",
+res_OK:"Started",res_BUSY:"Another zone is running",res_TANK_LOW:"The tank is low",res_DAILY_LIMIT:"Daily limit reached for this zone",res_VALVE_FAULT:"Valve fault: clear the fault first",res_PUMP_FAULT:"Pump fault: clear the fault first",res_BLOCKED:"Refused: watering is switched off or it is freezing",res_TOO_SHORT:"Too short",res_BAD_ZONE:"Unknown zone",coldw:"Started, but it is colder than this zone's limit.",
+safety:"Safety",alloff:"All off",winter:"Winter mode",frost:"Frost limit",gnote:"All off and Winter mode stop all watering and refuse “Water now” (Winter mode is for a drained system). Below the frost limit nothing is watered either.",
+ctrl:"Controller",ctime:"Time",wifi:"WiFi",up:"Uptime",tankcm:"Water surface",setclk:"Set clock from this device",clkok:"Clock set",data:"Data",log:"Download log (CSV)",health:"Health page",
+u_m:"{0} min",u_h:"{0} h",u_d:"{0} d",
+b_off:"Can't reach the controller. Retrying…",b_flt:"A safety cut-off tripped: a valve or the pump ran longer than allowed.",b_clr:"Clear",b_rtc:"The clock has lost its time. Scheduling is paused until it is set.",b_set:"Set",b_drift:"The controller clock is off by {0}.",b_tank:"The tank is low. Watering is stopped.",b_aoff:"All watering is switched off.",b_win:"Winter mode: no watering.",b_frost:"Frost: no watering below {0} °C.",b_env:"Temperature sensor fault: the cold and frost rules are skipped.",
+hnone:"Nothing logged yet.",hsch:"Scheduled",hman:"Manual",st_USER:"stopped by you",st_TANK_LOW:"stopped: tank low",st_FAULT:"stopped: fault"},
+hu:{title:"Öntözés",zones:"Zónák",cond:"Állapot",load:"Betöltés…",temp:"Hőmérséklet",hum:"Páratartalom",tank:"Tartály",rain:"Eső",pump:"Szivattyú",ok:"Rendben",low:"Alacsony",dry:"Száraz",wet:"Nedves",on:"Be",off:"Ki",fault:"Hiba",hist:"Előzmények",sys:"Rendszer",back:"Vissza",zone:"{0}. zóna",
+wtr:"Öntözés",left:"{0} van hátra",done:"Ma kész",next:"Következő: {0}",queued:"Sorban áll",wait:"Vár: {0}",skip:"Kihagyva: {0}",skipn:"Kihagyva",dis:"Kikapcsolva",min:"{0} perc",
+r_COLD:"túl hideg",r_RAIN:"eső",r_FROST:"fagy",r_TANK_LOW:"kevés a víz",r_ALL_OFF:"minden kikapcsolva",r_WINTER:"téli üzemmód",r_WINDOW_MISSED:"lejárt az időablak",r_QUEUE_TIMEOUT:"túl sokat várt",r_DAILY_LIMIT:"napi korlát",r_VALVE_FAULT:"hiba",r_PUMP_FAULT:"hiba",
+sfault:"Érzékelőhiba",now:"Öntözés most",start:"Öntözés indítása",stop:"Leállítás",set:"Beállítások",en:"Engedélyezve",mode:"Üzemmód",m0:"Ütemezett",m1:"Zárt hurkú",m2:"Nyílt hurkú",soon:"A többi üzemmód hamarosan érkezik.",runl:"Öntözés hossza",ws:"Időablak kezdete",we:"Időablak vége",cold:"Hidegkorlát",cov:"Letakarva eddig",covh:"A letakart növények nem kapnak eső-jóváírást: az esőtiltás eddig a napig nem érvényes rájuk.",clr:"Törlés",soil:"Talajnedvesség",
+saved:"Mentve",e_save:"A mentés nem sikerült",e_win:"Az időablak végének a kezdete után kell lennie.",e_conn:"Nincs kapcsolat",
+res_OK:"Elindítva",res_BUSY:"Másik zóna épp öntöz",res_TANK_LOW:"Kevés a víz a tartályban",res_DAILY_LIMIT:"A zóna elérte a napi korlátot",res_VALVE_FAULT:"Szelephiba: előbb töröld a hibát",res_PUMP_FAULT:"Szivattyúhiba: előbb töröld a hibát",res_BLOCKED:"Elutasítva: az öntözés ki van kapcsolva, vagy fagy van",res_TOO_SHORT:"Túl rövid",res_BAD_ZONE:"Ismeretlen zóna",coldw:"Elindítva, de hidegebb van a zóna korlátjánál.",
+safety:"Biztonság",alloff:"Minden kikapcsolva",winter:"Téli üzemmód",frost:"Fagyhatár",gnote:"A „Minden kikapcsolva” és a téli üzemmód leállít minden öntözést, és elutasítja az „Öntözés most” kérést (a téli üzemmód leürített rendszerhez való). A fagyhatár alatt sem öntöz semmi.",
+ctrl:"Vezérlő",ctime:"Idő",wifi:"WiFi",up:"Üzemidő",tankcm:"Vízfelszín",setclk:"Óra beállítása erről az eszközről",clkok:"Óra beállítva",data:"Adatok",log:"Napló letöltése (CSV)",health:"Állapotoldal",
+u_m:"{0} perc",u_h:"{0} óra",u_d:"{0} nap",
+b_off:"A vezérlő nem érhető el. Újrapróbálom…",b_flt:"Biztonsági lekapcsolás történt: egy szelep vagy a szivattyú a megengedettnél tovább járt.",b_clr:"Törlés",b_rtc:"Az óra elvesztette az időt. Az ütemezés szünetel, amíg be nem állítod.",b_set:"Beállít",b_drift:"A vezérlő órája {0} eltér.",b_tank:"Kevés a víz a tartályban. Az öntözés leállt.",b_aoff:"Minden öntözés ki van kapcsolva.",b_win:"Téli üzemmód: nincs öntözés.",b_frost:"Fagy: {0} °C alatt nincs öntözés.",b_env:"Hőmérséklet-érzékelő hiba: a hideg- és fagyszabályok kimaradnak.",
+hnone:"Még nincs naplóbejegyzés.",hsch:"Ütemezett",hman:"Kézi",st_USER:"te állítottad le",st_TANK_LOW:"leállt: kevés a víz",st_FAULT:"leállt: hiba"}
+};
+var L='',S=null,view='v1',zid=1,off=0,fails=0,dur=300,lastEdit=0,pt=0,tt=0,sig='',zc=[],hrows=null;
+var DURS=[60,120,300,600,900];
+
+function $(i){return document.getElementById(i)}
+function t(k,a){var s=(T[L]&&T[L][k])||k;return a==null?s:s.replace('{0}',a)}
+function el(tag,c,x){var e=document.createElement(tag);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+function p2(n){return n<10?'0'+n:''+n}
+function hm(m){return p2(Math.floor(m/60))+':'+p2(m%60)}
+function tv(m){return m>=1440?'23:59':hm(m)}
+function mmss(s){return Math.floor(s/60)+':'+p2(s%60)}
+function rs(c){return (T[L]&&T[L]['r_'+c])||String(c).toLowerCase().replace(/_/g,' ')}
+function span(d){return d<3600?t('u_m',Math.max(1,Math.round(d/60))):d<172800?t('u_h',Math.round(d/3600)):t('u_d',Math.round(d/86400))}
+function api(u,o){return fetch(u,o).then(function(r){return r.json()})}
+function post(u,d){
+  var b=[],k;
+  for(k in d)b.push(k+'='+encodeURIComponent(d[k]));
+  return api(u,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:b.join('&')});
+}
+function toast(x){
+  var e=$('ts');
+  e.textContent=x;e.className='ts on';
+  clearTimeout(tt);
+  tt=setTimeout(function(){e.className='ts'},2400);
+}
+
+// ---- language ----
+try{L=localStorage.getItem('l')||''}catch(e){}
+if(!T[L])L=/^hu/i.test(navigator.language||'')?'hu':'en';
+try{dur=+localStorage.getItem('d')||300}catch(e){}
+function setL(l){L=l;try{localStorage.setItem('l',l)}catch(e){}tr()}
+function tr(){
+  var e=document.querySelectorAll('[data-t]'),i;
+  document.documentElement.lang=L;
+  document.title=t('title');
+  for(i=0;i<e.length;i++)e[i].textContent=t(e[i].getAttribute('data-t'));
+  $('lh').setAttribute('aria-pressed',L=='hu');
+  $('le').setAttribute('aria-pressed',L=='en');
+  drawChips();
+  sig='';hrows&&drawHist();
+  render();
+}
+
+// ---- state ----
+function poll(){
+  fetch('/api/state',{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(j){
+    S=j;fails=0;off=0;
+    if(S.z.length!=zc.length)buildHome();
+    render();
+  }).catch(function(){if(++fails>=2){off=1;banners()}}).then(function(){
+    pt=setTimeout(poll,document.hidden?6000:2000);
+  });
+}
+function pollNow(){clearTimeout(pt);poll()}
+
+function render(){
+  banners();
+  if(!S)return;
+  updHome();updZone();updSys();
+}
+
+// ---- banners ----
+function banners(){
+  var a=[],d,h='';
+  if(off)a.push(['e',t('b_off'),'']);
+  if(S){
+    if(S.flt)a.push(['e',t('b_flt'),'clr']);
+    if(!S.ok)a.push(['e',t('b_rtc'),'clk']);
+    else{d=Math.abs(Date.now()/1000-S.t);if(d>90)a.push(['e',t('b_drift',span(d)),'clk'])}
+    if(S.tank.low)a.push(['e',t('b_tank'),'']);
+    if(!S.env.ok)a.push(['e',t('b_env'),'']);
+    if(S.g.off)a.push(['i',t('b_aoff'),'']);
+    else if(S.g.win)a.push(['i',t('b_win'),'']);
+    else if(S.g.blk=='FROST')a.push(['i',t('b_frost',S.g.frost),'']);
+  }
+  h=JSON.stringify(a);
+  if(h==sig)return;
+  sig=h;
+  var c=$('bns'),i,b,x;
+  c.innerHTML='';
+  for(i=0;i<a.length;i++){
+    b=el('div','bn'+(a[i][0]=='i'?' i':''));
+    b.setAttribute('role','alert');
+    b.appendChild(el('span','',a[i][1]));
+    if(a[i][2]){x=el('button','',t(a[i][2]=='clr'?'b_clr':'b_set'));x.type='button';x.setAttribute('data-a',a[i][2]);b.appendChild(x)}
+    c.appendChild(b);
+  }
+}
+function setClock(){
+  post('/api/clock',{t:Math.floor(Date.now()/1000)}).then(function(j){toast(j.ok?t('clkok'):t('e_save'));pollNow()}).catch(function(){toast(t('e_conn'))});
+}
+$('bns').onclick=function(e){
+  var a=e.target.getAttribute&&e.target.getAttribute('data-a');
+  if(a=='clr')post('/api/faults/clear',{}).then(function(){pollNow()}).catch(function(){toast(t('e_conn'))});
+  else if(a=='clk')setClock();
+};
+
+// ---- home ----
+function zst(i){
+  var z=S.z[i],x=zst0(i);
+  return z.sf&&z.en?x+' \u00b7 '+t('sfault'):x;
+}
+function zst0(i){
+  var z=S.z[i],s=z.st;
+  if(S.az==i)return t('wtr')+' · '+t('left',mmss(Math.max(0,S.tot-S.el)));
+  if(s=='DISABLED')return t('dis');
+  if(s=='DONE')return t('done')+(z.today?' · '+t('min',Math.round(z.today/60)):'');
+  if(s=='SKIPPED')return z.why?t('skip',rs(z.why)):t('skipn');
+  if(s=='BLOCKED')return t('wait',rs(z.why));
+  if(s=='QUEUED')return t('queued');
+  return t('next',hm(z.s));
+}
+function buildHome(){
+  var l=$('zl'),i,b,r;
+  l.innerHTML='';zc=[];
+  for(i=0;i<S.z.length;i++){
+    b=el('button','zc go');b.type='button';
+    b.innerHTML='<span class="ring"><svg viewBox="0 0 48 48" aria-hidden="true"><circle class="tr" cx="24" cy="24" r="20"/><circle class="fg" cx="24" cy="24" r="20" stroke-dasharray="0 125.7"/></svg><b></b></span><span class="zb"><span class="zt"></span><br><span class="zs"></span></span><i class="pb"></i>';
+    b.onclick=(function(n){return function(){location.hash='#z'+(n+1)}})(i);
+    l.appendChild(b);
+    zc.push({b:b,fg:b.querySelector('.fg'),n:b.querySelector('b'),t:b.querySelector('.zt'),s:b.querySelector('.zs'),pb:b.querySelector('.pb')});
+  }
+}
+function kv(k,v,m){
+  var r=el('div','row st');
+  r.appendChild(el('span','nm',k));
+  r.appendChild(el('span','vl'+(m?' m':''),v));
+  return r;
+}
+function envv(v,u){return v==null?'–':v+u}
+function updHome(){
+  var i,z,r,w,p,c=$('cl');
+  $('meta').textContent=(S.lt?S.lt.slice(11,16):'--:--')+(S.env.ok&&S.env.c!=null?' · '+S.env.c+' °C':'');
+  for(i=0;i<zc.length;i++){
+    z=S.z[i];r=zc[i];w=S.az==i;p=z.soil;
+    r.b.className='zc go'+(w?' w':'');
+    r.t.textContent=t('zone',i+1);
+    r.s.textContent=zst(i);
+    r.s.className='zs'+(w?' w':(z.st=='BLOCKED'||z.st=='SKIPPED'||(z.sf&&z.en))?' wn':'');
+    r.n.textContent=p==null?'–':p;
+    r.fg.setAttribute('stroke-dasharray',(p==null?0:p*1.257)+' 125.7');
+    r.fg.style.display=(p==null||p<=0)?'none':'';
+    r.pb.style.width=w&&S.tot?Math.min(100,S.el*100/S.tot)+'%':'0';
+  }
+  c.innerHTML='';
+  c.appendChild(kv(t('temp'),S.env.ok?envv(S.env.c,' °C'):t('fault')));
+  c.appendChild(kv(t('hum'),S.env.ok?envv(S.env.h,' %'):t('fault')));
+  c.appendChild(kv(t('tank'),S.tank.low?t('low'):t('ok')));
+  c.appendChild(kv(t('rain'),S.rain?t('wet'):t('dry')));
+  c.appendChild(kv(t('pump'),S.pump?t('on'):t('off')));
+}
+
+// ---- zone view ----
+function drawChips(){
+  var c=$('ch'),i,b;
+  c.innerHTML='';
+  for(i=0;i<DURS.length;i++){
+    b=el('button','chip',t('min',DURS[i]/60));b.type='button';
+    b.setAttribute('aria-pressed',DURS[i]==dur);
+    b.onclick=(function(d){return function(){dur=d;try{localStorage.setItem('d',d)}catch(e){}drawChips()}})(DURS[i]);
+    c.appendChild(b);
+  }
+}
+function setZ(p,loc){
+  var z=S.z[zid-1],k;
+  p.id=zid;
+  for(k in loc)z[k]=loc[k];
+  lastEdit=0;render();lastEdit=Date.now();
+  post('/api/zone',p).then(function(j){
+    if(j.ok)toast(t('saved'));
+    else{lastEdit=0;toast(j.e=='win'?t('e_win'):t('e_save'));if(document.activeElement&&document.activeElement.blur)document.activeElement.blur()}
+    pollNow();
+  }).catch(function(){lastEdit=0;toast(t('e_conn'));pollNow()});
+}
+function idle(x){return document.activeElement!==x&&Date.now()-lastEdit>2500}
+function updZone(){
+  if(view!='v2')return;
+  var z=S.z[zid-1],w;
+  if(!z){location.hash='';return}
+  w=S.az==zid-1;
+  $('zt').textContent=t('zone',zid);
+  $('zst').textContent=zst(zid-1);
+  $('zst').className='meta'+(w?' w':'');
+  $('wi').hidden=w;$('wr').hidden=!w;
+  if(w){
+    $('pg').style.width=S.tot?Math.min(100,S.el*100/S.tot)+'%':'0';
+    $('wt').textContent=t('left',mmss(Math.max(0,S.tot-S.el)));
+  }
+  $('sv').textContent=z.sf?t('fault'):z.soil==null?'–':z.soil+' %';
+  if(idle($('ze')))$('ze').checked=!!z.en;
+  $('ms').children[0].setAttribute('aria-pressed',z.m==0);
+  $('ms').children[1].setAttribute('aria-pressed',z.m==1);
+  $('ms').children[2].setAttribute('aria-pressed',z.m==2);
+  if(idle($('rv')))$('rv').textContent=t('min',Math.round(z.run/6)/10);
+  if(idle($('zs1')))$('zs1').value=hm(z.s);
+  if(idle($('ze1')))$('ze1').value=tv(z.e);
+  if(idle($('cv')))$('cv').textContent=z.cold+' °C';
+  if(idle($('zc')))$('zc').value=z.cov||'';
+  $('zcx').hidden=!z.cov;
+}
+function runStep(up){
+  var m=S.z[zid-1].run/60,n;
+  if(up)n=m<10?Math.floor(m)+1:Math.floor(m/5)*5+5;
+  else n=m<=10?Math.ceil(m)-1:Math.ceil(m/5)*5-5;
+  n=Math.max(1,Math.min(60,n));
+  setZ({run:n*60},{run:n*60});
+}
+function tmin(v){var a=/^(\d\d):(\d\d)$/.exec(v);return a?+a[1]*60+ +a[2]:-1}
+$('ze').onchange=function(){setZ({en:this.checked?1:0},{en:this.checked?1:0})};
+$('rm').onclick=function(){runStep(0)};
+$('rp').onclick=function(){runStep(1)};
+$('cm').onclick=function(){var c=Math.max(-10,S.z[zid-1].cold-1);setZ({cold:c},{cold:c})};
+$('cp').onclick=function(){var c=Math.min(30,S.z[zid-1].cold+1);setZ({cold:c},{cold:c})};
+$('zs1').onchange=function(){var m=tmin(this.value);if(m>=0)setZ({s:m},{s:m})};
+$('ze1').onchange=function(){var m=tmin(this.value);if(m>=0)setZ({e:m},{e:m})};
+$('zc').onchange=function(){setZ({cov:this.value},{cov:this.value})};
+$('zcx').onclick=function(){$('zc').value='';setZ({cov:''},{cov:''})};
+$('ws').onclick=function(){
+  post('/api/water',{id:zid,sec:dur}).then(function(j){
+    toast(j.r=='OK'?(j.cold?t('coldw'):t('res_OK')):t('res_'+j.r));
+    pollNow();
+  }).catch(function(){toast(t('e_conn'))});
+};
+$('wx').onclick=function(){post('/api/stop',{}).then(function(){pollNow()}).catch(function(){toast(t('e_conn'))})};
+
+// ---- system view ----
+function setG(p,loc){
+  var k;
+  for(k in loc)S.g[k]=loc[k];
+  lastEdit=0;render();lastEdit=Date.now();
+  post('/api/global',p).then(function(j){
+    if(j.ok)toast(t('saved'));else{lastEdit=0;toast(t('e_save'))}
+    pollNow();
+  }).catch(function(){lastEdit=0;toast(t('e_conn'));pollNow()});
+}
+function updSys(){
+  if(view!='v3')return;
+  var c=$('sl');
+  if(idle($('goff')))$('goff').checked=!!S.g.off;
+  if(idle($('gwin')))$('gwin').checked=!!S.g.win;
+  if(idle($('fv')))$('fv').textContent=S.g.frost+' °C';
+  c.innerHTML='';
+  c.appendChild(kv(t('ctime'),S.lt||'–'));
+  c.appendChild(kv(t('wifi'),S.wifi.ssid+' · '+S.wifi.rssi+' dBm'));
+  c.appendChild(kv(t('up'),span(S.up)));
+  c.appendChild(kv(t('tankcm'),S.tank.cm==null?'–':S.tank.cm+' cm'));
+}
+$('goff').onchange=function(){var v=this.checked?1:0;setG({off:v},{off:v})};
+$('gwin').onchange=function(){var v=this.checked?1:0;setG({win:v},{win:v})};
+$('fm').onclick=function(){var f=Math.max(-10,S.g.frost-1);setG({frost:f},{frost:f})};
+$('fp').onclick=function(){var f=Math.min(10,S.g.frost+1);setG({frost:f},{frost:f})};
+$('sc').onclick=setClock;
+
+// ---- history ----
+function loadHist(){
+  fetch('/api/log',{cache:'no-store'}).then(function(r){return r.text()}).then(function(x){
+    var l=x.split('\n'),i,c;
+    hrows=[];
+    for(i=l.length-1;i>=0;i--){
+      if(!l[i]||l[i].indexOf('utc,')==0)continue;
+      c=l[i].split(',');
+      if(c.length>=9)hrows.push(c);
+    }
+    drawHist();
+  }).catch(function(){toast(t('e_conn'))});
+}
+function dayName(d){
+  var a=d.split('-');
+  try{return new Date(+a[0],+a[1]-1,+a[2]).toLocaleDateString(L,{weekday:'short',day:'numeric',month:'short'})}catch(e){return d}
+}
+function hrow(c){
+  var r=el('div','row hr st'),n=el('span','nm'),v,sub=c[1].slice(11,16)+' · '+t(c[3]=='MANUAL'?'hman':'hsch');
+  if(c[8].indexOf('SKIP_')==0){
+    v=el('span','vl m',t('skip',rs(c[8].slice(5))));
+  }else{
+    v=el('span','vl',t('min',Math.round(c[6]/6)/10)+(c[7]?' · '+c[7]+' L':''));
+    if(c[8]!='DONE')sub+=' · '+(t('st_'+c[8])||c[8]);
+  }
+  n.appendChild(el('span','zt',t('zone',c[2])));
+  n.appendChild(el('br'));
+  n.appendChild(el('span','zs',sub));
+  r.appendChild(n);r.appendChild(v);
+  return r;
+}
+function drawHist(){
+  var h=$('hl'),i,d='',l=null,c;
+  h.innerHTML='';
+  if(!hrows||!hrows.length){h.appendChild(el('p','small',t('hnone')));return}
+  for(i=0;i<hrows.length;i++){
+    c=hrows[i];
+    if(c[1].slice(0,10)!=d){
+      d=c[1].slice(0,10);
+      h.appendChild(el('div','lb',dayName(d)));
+      l=el('div','list');h.appendChild(l);
+    }
+    l.appendChild(hrow(c));
+  }
+}
+
+// ---- navigation ----
+function route(){
+  var h=location.hash,m=/^#z(\d+)$/.exec(h),v='v1';
+  if(m){v='v2';zid=+m[1]}
+  else if(h=='#sys')v='v3';
+  else if(h=='#hist')v='v4';
+  if(v!=view){
+    $(view).className='v';
+    $(v).className='v on'+(v=='v1'?' bk':'');
+    view=v;
+    window.scrollTo(0,0);
+    lastEdit=0;
+    if(v=='v4')loadHist();
+  }
+  $('back').className='ib'+(v=='v1'?' hid':'');
+  render();
+}
+window.addEventListener('hashchange',route);
+$('back').onclick=function(){location.hash=''};
+$('gh').onclick=function(){location.hash='#hist'};
+$('gs').onclick=function(){location.hash='#sys'};
+$('lh').onclick=function(){setL('hu')};
+$('le').onclick=function(){setL('en')};
+document.addEventListener('visibilitychange',function(){if(!document.hidden)pollNow()});
+window.addEventListener('scroll',function(){$('hd').className=(window.pageYOffset>4)?'sc':''},{passive:true});
+tr();
+route();
+poll();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f2f6f3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a120d" media="(prefers-color-scheme: dark)">
+<title>Irrigation setup</title>
+<!-- Favicon inline (data URI): costs the ESP no extra request. Two-leaf sprout. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231a7f44'/%3E%3Cpath d='M16 26V14' stroke='%23fff' stroke-width='2.2' stroke-linecap='round'/%3E%3Cpath fill='%23fff' d='M16 20C11 20 8 17 8 11c5 0 8 3 8 9zM16 16c0-5 3-8 8-8 0 5-3 8-8 8z'/%3E%3C/svg%3E">
+<style>
+/* Tokens. Light first, dark via prefers-color-scheme. */
+:root{--bg:#f2f6f3;--card:#fff;--tx:#0f2216;--t2:#5b6e61;--sp:rgba(15,34,22,.12);--g:#1a7f44;--on:#fff;--tint:#d9efe0;--hb:rgba(242,246,243,.78);--er:#c4281c;--wb:#fdecea;--sh:rgba(26,127,68,.3)}
+@media(prefers-color-scheme:dark){:root{--bg:#0a120d;--card:#152019;--tx:#e9f5ed;--t2:#8ea697;--sp:rgba(255,255,255,.13);--g:#3fcf7c;--on:#04210f;--tint:#12301f;--hb:rgba(10,18,13,.72);--er:#ff8a80;--wb:#3a1a18;--sh:rgba(0,0,0,.45)}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;background:radial-gradient(90% 50% at 50% -8%,var(--tint),transparent 70%),var(--bg);color:var(--tx);font:1.0625rem/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit;margin:0}
+button{-webkit-appearance:none;appearance:none;cursor:pointer;touch-action:manipulation}
+[hidden]{display:none!important}
+/* Translucent header; separator only appears once content scrolls under it */
+header{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;height:52px;height:calc(52px + env(safe-area-inset-top));padding:0 16px;padding-top:env(safe-area-inset-top);padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right));background:var(--hb);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);transition:box-shadow .2s}
+header.sc{box-shadow:0 1px 0 var(--sp)}
+@supports not ((-webkit-backdrop-filter:a) or (backdrop-filter:a)){header{background:var(--bg)}}
+main{max-width:30rem;margin:0 auto;padding:0 16px 32px;padding-bottom:calc(32px + env(safe-area-inset-bottom))}
+.ib{display:flex;align-items:center;border:0;background:none;color:var(--g);height:44px;padding:0 8px 0 0;margin-left:-4px;font-size:1.0625rem}
+.ib svg{margin-right:6px}
+.hid{visibility:hidden}
+.seg{display:flex;background:var(--sp);border-radius:10px;padding:2px}
+.seg button{border:0;background:none;color:var(--t2);min-width:40px;height:32px;border-radius:8px;font-size:.75rem;font-weight:600;letter-spacing:.05em;transition:background .2s,color .2s}
+.seg button[aria-pressed=true]{background:var(--card);color:var(--tx);box-shadow:0 1px 3px rgba(0,0,0,.18)}
+/* Views: a push enters from the right, going back enters from the left */
+.v{display:none}
+.v.on{display:block;animation:in .42s cubic-bezier(.2,.8,.2,1) both}
+.v.on.bk{animation-name:ib}
+@keyframes in{from{opacity:0;transform:translateX(28px)}}
+@keyframes ib{from{opacity:0;transform:translateX(-28px)}}
+@keyframes fd{from{opacity:0}}
+@keyframes rt{to{transform:rotate(360deg)}}
+.hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:12px 0 4px}
+.ico{display:flex;align-items:center;justify-content:center;width:76px;height:76px;border-radius:22px;background:linear-gradient(145deg,#55cc88,#1a7f44);box-shadow:0 8px 24px var(--sh),inset 0 1px 0 rgba(255,255,255,.35);margin-bottom:18px}
+.ico svg{width:46px;height:46px;color:#fff}
+h1{font-size:2rem;line-height:1.1;letter-spacing:-.022em;font-weight:700;margin:0 0 8px}
+.sub{color:var(--t2);margin:0 auto 20px;max-width:26em;font-size:1rem;line-height:1.45}
+#v2 h1{margin:12px 0 16px}
+.lb{font-size:.8125rem;letter-spacing:.02em;text-transform:uppercase;color:var(--t2);margin:22px 16px 8px}
+.list{background:var(--card);border-radius:14px;overflow:hidden;margin:0 0 12px}
+.row,.fl{position:relative;display:flex;align-items:center;width:100%;min-height:50px;padding:0 16px;border:0;background:none;text-align:left}
+.row+.row:before,.fl+.fl:before{content:"";position:absolute;top:0;left:16px;right:0;height:1px;background:var(--sp)}
+.row{transition:background .25s}
+.row:active{background:var(--sp);transition:none}
+.row.st{color:var(--t2);cursor:default}
+.row.st:active{background:none}
+.nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.go:after{content:"";flex:none;width:8px;height:8px;margin-left:12px;border:solid var(--t2);border-width:2px 2px 0 0;transform:rotate(45deg);opacity:.55}
+.lk{display:flex;margin-left:10px;color:var(--t2)}
+.sig{display:flex;align-items:flex-end;height:14px;margin-left:10px}
+.sig b{width:3px;margin-left:2px;border-radius:1px;background:var(--sp)}
+.sig b:nth-child(1){height:5px}
+.sig b:nth-child(2){height:8px}
+.sig b:nth-child(3){height:11px}
+.sig b:nth-child(4){height:14px}
+.l1 b:nth-child(-n+1),.l2 b:nth-child(-n+2),.l3 b:nth-child(-n+3),.l4 b{background:var(--tx)}
+.spin{flex:none;width:20px;height:20px;margin-right:12px;border:2.5px solid var(--sp);border-top-color:var(--g);border-radius:50%;animation:rt .8s linear infinite}
+.fl label{flex:0 0 6.5rem}
+.fl input[type=text],.fl input[type=password]{flex:1;min-width:0;height:50px;border:0;background:none;outline:0;text-overflow:ellipsis}
+.fl input[readonly]{color:var(--t2)}
+.fl input::placeholder{color:var(--t2);opacity:.7}
+.fl:focus-within label{color:var(--g)}
+.fl.sw label{flex:1}
+/* iOS style switch */
+.sw input{-webkit-appearance:none;appearance:none;position:relative;flex:none;width:51px;height:31px;border-radius:16px;background:var(--sp);outline:0;transition:background .25s}
+.sw input:after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.3);transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.sw input:checked{background:var(--g)}
+.sw input:checked:after{transform:translateX(20px)}
+.sw input:focus-visible{box-shadow:0 0 0 3px var(--tint)}
+.er{color:var(--er);font-size:.875rem;line-height:1.35;margin:8px 16px 0;min-height:1.2em}
+.btn{display:block;width:100%;height:52px;border:0;border-radius:14px;background:var(--g);color:var(--on);font-weight:600;letter-spacing:-.01em;margin-top:20px;transition:transform .12s ease-out,opacity .2s}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.35;transform:none;cursor:default}
+.tl{border:0;background:none;color:var(--g);padding:12px 4px;font-size:1rem;text-decoration:none}
+.tl:active{opacity:.5}
+.ctr{text-align:center}
+.small{font-size:.8125rem;line-height:1.45;letter-spacing:.01em;color:var(--t2);margin:12px 16px}
+.bn{display:flex;align-items:center;background:var(--wb);color:var(--er);border-radius:14px;padding:12px 16px;margin:0 0 16px;font-size:.9375rem;line-height:1.35}
+.bn span{flex:1}
+.bn button{flex:none;margin-left:12px;padding:6px 0;color:inherit;font-weight:600;text-decoration:underline}
+.c{padding-top:36px}
+.c .ico{margin-left:auto;margin-right:auto}
+.c p{color:var(--t2);margin:0 auto 12px;max-width:24em}
+.c .spin{display:inline-block;margin:6px 0 0}
+@media(prefers-reduced-motion:reduce){.v.on,.v.on.bk{animation-name:fd}.sw input:after,.row{transition:none}}
+@media(prefers-reduced-transparency:reduce){header{background:var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none}}
+@media(prefers-contrast:more){.list,.bn{outline:1px solid var(--t2)}.sub,.lb,.small{color:var(--tx)}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="p" viewBox="0 0 32 32"><path d="M16 26V14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/><path fill="currentColor" d="M16 20C11 20 8 17 8 11c5 0 8 3 8 9zM16 16c0-5 3-8 8-8 0 5-3 8-8 8z"/></symbol></svg>
+<header id="hd">
+<button id="back" class="ib hid" type="button"><svg width="12" height="20" viewBox="0 0 12 20" aria-hidden="true"><path d="M10 2L2 10l8 8" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-t="back"></span></button>
+<div class="seg"><button id="lh" type="button">HU</button><button id="le" type="button">EN</button></div>
+</header>
+<main>
+<noscript><p class="sub">JavaScript is required / A JavaScript szükséges.</p></noscript>
+
+<section id="v1" class="v on">
+<div class="hero"><div class="ico"><svg aria-hidden="true"><use href="#p"/></svg></div>
+<h1 data-t="head"></h1>
+<p class="sub" data-t="sub"></p></div>
+<div id="bn" class="bn" role="alert" hidden><span id="bt"></span><button id="br" class="tl" type="button" data-t="retry"></button></div>
+<div class="lb" data-t="nets"></div>
+<div id="nl" class="list"></div>
+<div class="list"><button id="oth" class="row go" type="button"><span class="nm" data-t="other"></span></button></div>
+<div class="ctr"><button id="rs" class="tl" type="button" data-t="again"></button></div>
+<p class="small" data-t="hint"></p>
+</section>
+
+<section id="v2" class="v">
+<h1 data-t="join"></h1>
+<form id="f" autocomplete="off" novalidate>
+<div class="list">
+<div class="fl"><label for="ssid" data-t="name"></label><input id="ssid" name="ssid" type="text" maxlength="32" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="username"></div>
+<div class="fl" id="pr"><label for="pass" data-t="pw"></label><input id="pass" name="pass" type="password" maxlength="63" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="current-password"></div>
+<div class="fl sw" id="sr"><label for="show" data-t="show"></label><input id="show" type="checkbox"></div>
+</div>
+<div class="er" id="er" aria-live="polite"></div>
+<button id="ok" class="btn" type="submit" data-t="go"></button>
+</form>
+</section>
+
+<section id="v3" class="v">
+<div class="c ctr"><div class="ico"><svg aria-hidden="true"><use href="#p"/></svg></div>
+<h1 data-t="wait"></h1>
+<p id="nt"></p>
+<span class="spin"></span>
+<p id="sl" class="small" hidden></p>
+<div><a id="ol" class="tl"></a></div>
+<div><button id="ed" class="tl" type="button" data-t="edit"></button></div></div>
+</section>
+</main>
+<script>
+(function(){
+var T={
+en:{head:"Irrigation setup",sub:"Pick the WiFi network the controller should join. Only 2.4 GHz networks work.",nets:"Networks",scan:"Scanning\u2026",none:"No networks found",again:"Scan again",other:"Other network\u2026",hint:"Using a phone hotspot? Switch it on first, use the 2.4 GHz band (iPhone: Maximize Compatibility) and do this setup from another device.",back:"Back",join:"Join network",name:"Network",pw:"Password",show:"Show password",go:"Save and connect",nph:"Network name",req:"Required",opt:"Optional",e_name:"Enter the network name.",e_ssid:"The network name is not valid (1\u201332 bytes, no control characters).",e_chars:"Use only standard keyboard characters (no accents or emoji).",e_len:"The password must be at least 8 characters.",e_save:"Could not save the settings. Try again.",e_conn:"Could not reach the controller. Is this device still on its WiFi?",fail:"Could not connect to \u201c{0}\u201d. Check the password or choose another network.",retry:"Try again",wait:"Connecting\u2026",note:"The controller is restarting (about 10 seconds). Then join {0} on this device and this page opens by itself.",slow:"Still waiting. Is this device on {0}?",edit:"Change network",open:"Open {0}"},
+hu:{head:"Öntözővezérlő beállítása",sub:"Válaszd ki azt a WiFi-hálózatot, amelyre a vezérlő csatlakozzon. Csak a 2,4 GHz-es hálózatok működnek.",nets:"Hálózatok",scan:"Keresés\u2026",none:"Nem található hálózat",again:"Újrakeresés",other:"Másik hálózat\u2026",hint:"Telefon hotspotot használsz? Kapcsold be előbb, 2,4 GHz-es sávon (iPhone: \u201eKompatibilitás maximalizálása\u201d), és a beállítást másik eszközről végezd.",back:"Vissza",join:"Csatlakozás hálózathoz",name:"Hálózat",pw:"Jelszó",show:"Jelszó mutatása",go:"Mentés és csatlakozás",nph:"Hálózat neve",req:"Kötelező",opt:"Nem kötelező",e_name:"Add meg a hálózat nevét.",e_ssid:"Érvénytelen hálózatnév (1\u201332 bájt, vezérlőkarakterek nélkül).",e_chars:"Csak szabványos billentyűzetkarakterek használhatók (ékezet és emoji nélkül).",e_len:"A jelszó legalább 8 karakter legyen.",e_save:"A mentés nem sikerült. Próbáld újra.",e_conn:"A vezérlő nem érhető el. Még a saját WiFi-jén vagy ezzel az eszközzel?",fail:"Nem sikerült csatlakozni: \u201e{0}\u201d. Ellenőrizd a jelszót, vagy válassz másik hálózatot.",retry:"Újra",wait:"Csatlakozás\u2026",note:"A vezérlő újraindul (kb. 10 másodperc). Ezután csatlakozz a(z) {0} hálózatra ezen az eszközön, és az oldal magától megnyílik.",slow:"Még várunk. Ez az eszköz a(z) {0} hálózaton van?",edit:"Hálózat módosítása",open:"{0} megnyitása"}
+};
+var LOCK='<svg width="12" height="14" viewBox="0 0 12 14" aria-hidden="true"><path fill="currentColor" d="M2 6h8a1 1 0 011 1v6a1 1 0 01-1 1H2a1 1 0 01-1-1V7a1 1 0 011-1z"/><path d="M3.5 6V4a2.5 2.5 0 015 0v2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
+var L='',cur='v1',host='irrigation',nets=[],pick=null,ek='',fl=0,fs='',saved='',tries=0,slow=0,busy=1;
+
+function $(i){return document.getElementById(i)}
+function trim(s){return s.replace(/^\s+|\s+$/g,'')}
+function t(k,a){var s=T[L][k]||k;return a==null?s:s.replace('{0}',a)}
+function blen(s){return encodeURIComponent(s).replace(/%[0-9A-F]{2}/g,'x').length}
+function el(tag,c,x){var e=document.createElement(tag);if(c)e.className=c;if(x)e.textContent=x;return e}
+function need(){return !!pick&&!pick.m&&!pick.o}
+
+// ---- language ----
+try{L=localStorage.getItem('l')||''}catch(e){}
+if(!T[L])L=/^hu/i.test(navigator.language||'')?'hu':'en';
+function setL(l){L=l;try{localStorage.setItem('l',l)}catch(e){}tr()}
+function tr(){
+  var e=document.querySelectorAll('[data-t]'),i;
+  document.documentElement.lang=L;
+  document.title=t('head');
+  for(i=0;i<e.length;i++)e[i].textContent=t(e[i].getAttribute('data-t'));
+  $('lh').setAttribute('aria-pressed',L=='hu');
+  $('le').setAttribute('aria-pressed',L=='en');
+  $('ssid').placeholder=t('nph');
+  $('pass').placeholder=t(need()?'req':'opt');
+  draw();err();note();
+}
+
+// ---- network list ----
+function lv(r){return r>-55?4:r>-65?3:r>-75?2:1}
+function stRow(x,spin){var b=el('div','row st');if(spin)b.appendChild(el('span','spin'));b.appendChild(el('span','nm',x));return b}
+function mk(n){return function(){choose(n.s,n.o,0)}}
+function draw(){
+  var nl=$('nl'),i,j,n,b,k,g;
+  nl.innerHTML='';
+  $('bn').hidden=!(fl&&fs);
+  if(fl&&fs)$('bt').textContent=t('fail',fs);
+  if(busy){nl.appendChild(stRow(t('scan'),1));return}
+  if(!nets.length){nl.appendChild(stRow(t('none')));return}
+  for(i=0;i<nets.length;i++){
+    n=nets[i];
+    b=el('button','row go');b.type='button';
+    b.appendChild(el('span','nm',n.s));
+    if(!n.o){k=el('span','lk');k.innerHTML=LOCK;b.appendChild(k)}
+    g=el('span','sig l'+lv(n.r));
+    for(j=0;j<4;j++)g.appendChild(el('b'));
+    b.appendChild(g);
+    b.onclick=mk(n);
+    nl.appendChild(b);
+  }
+}
+function poll(){
+  fetch('/scan',{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){
+    if(j.w){setTimeout(poll,1000);return}
+    nets=j.n||[];host=j.h||host;fl=j.f;fs=j.v||'';busy=0;draw();
+  }).catch(function(){setTimeout(poll,1500)});
+}
+function rescan(){
+  busy=1;draw();
+  fetch('/rescan',{cache:'no-store'}).then(poll).catch(function(){setTimeout(poll,2000)});
+}
+
+// ---- views ----
+function nav(v,bk){
+  $(cur).className='v';
+  $(v).className='v on'+(bk?' bk':'');
+  cur=v;
+  $('back').className='ib'+(v=='v1'?' hid':'');
+  window.scrollTo(0,0);
+}
+function choose(s,o,m){
+  var a=$('ssid'),p=$('pass');
+  pick={s:s,o:o,m:m};
+  a.value=s||'';a.readOnly=!m;
+  p.value='';p.type='password';$('show').checked=false;
+  $('pr').hidden=$('sr').hidden=!!(o&&!m);
+  p.placeholder=t(need()?'req':'opt');
+  ek='';chk(false);nav('v2');
+  if(m)a.focus();else if(!$('pr').hidden)p.focus();
+}
+
+// ---- form ----
+function err(){$('er').textContent=ek?t(ek):''}
+// Wrong input is reported at once; merely incomplete input only after the field is left (sh)
+function chk(sh){
+  var n=trim($('ssid').value),p=$('pass').value,k='',w=1;
+  if(/[\u0000-\u001f\u007f]/.test(n)||blen(n)>32)k='e_ssid';
+  else if(p&&/[^\x20-\x7e]/.test(p))k='e_chars';
+  else{w=0;if(!n)k='e_name';else if(p?p.length<8:need())k='e_len'}
+  $('ok').disabled=!!k;
+  ek=(sh||w)?k:'';
+  err();
+}
+function fin(){$('ok').disabled=false;err()}
+function submit(e){
+  var s=trim($('ssid').value),p=$('pass').value;
+  e.preventDefault();
+  $('ssid').value=s;
+  chk(true);
+  if($('ok').disabled)return;
+  $('ok').disabled=true;
+  fetch('/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'ssid='+encodeURIComponent(s)+'&pass='+encodeURIComponent(p)})
+  .then(function(r){return r.json()})
+  .then(function(j){
+    if(j.ok){saved=s;tries=0;slow=0;note();nav('v3');setTimeout(ping,1500);$('ok').disabled=false}
+    else{ek=j.e=='ssid'?'e_ssid':j.e=='pass'?'e_len':'e_save';fin()}
+  }).catch(function(){ek='e_conn';fin()});
+}
+
+// ---- saved: wait for the controller to appear on the home network ----
+function note(){
+  if(!saved)return;
+  $('nt').textContent=t('note',saved);
+  $('sl').hidden=!slow;
+  $('sl').textContent=t('slow',saved);
+  $('ol').textContent=t('open',host+'.local');
+  $('ol').href='http://'+host+'.local/';
+}
+function ping(){
+  var c,tm;
+  if(cur!='v3')return;
+  c=window.AbortController?new AbortController():null;
+  tm=setTimeout(function(){if(c)c.abort()},1500);
+  fetch('http://'+host+'.local/ping',{cache:'no-store',signal:c?c.signal:undefined})
+  .then(function(r){return r.text()})
+  .then(function(x){clearTimeout(tm);if(x=='ok')location.href='http://'+host+'.local/';else throw 0})
+  .catch(function(){clearTimeout(tm);if(++tries>30){slow=1;note()}setTimeout(ping,1000)});
+}
+
+// ---- wiring ----
+$('lh').onclick=function(){setL('hu')};
+$('le').onclick=function(){setL('en')};
+$('back').onclick=$('ed').onclick=function(){nav(cur=='v3'?'v2':'v1',1)};
+$('rs').onclick=rescan;
+$('oth').onclick=function(){choose('',0,1)};
+$('br').onclick=function(){var i,o=0;for(i=0;i<nets.length;i++)if(nets[i].s==fs)o=nets[i].o;choose(fs,o,0)};
+$('ssid').oninput=$('pass').oninput=function(){chk(false)};
+$('ssid').onchange=$('pass').onchange=function(){chk(true)};
+$('show').onchange=function(){$('pass').type=this.checked?'text':'password'};
+$('f').onsubmit=submit;
+window.addEventListener('scroll',function(){$('hd').className=(window.pageYOffset>4)?'sc':''},{passive:true});
+tr();
+poll();
+})();
+</script>
+</body>
+</html>
