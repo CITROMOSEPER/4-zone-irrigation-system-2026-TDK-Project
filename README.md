@@ -7,9 +7,8 @@ A repository a teljes projektet tartalmazza: a firmware-t, a webes felületet, a
 A projekt az Óbudai Egyetem Kandó Kálmán Villamosmérnöki Karán készült (2026 ősz).
 
 **Szerzők:** [Nemes Dániel](https://github.com/CITROMOSEPER), [Nyul Balázs](https://github.com/snotor)
-**Konzulens:** Sándor Tamás
 
-> **Állapot:** a végleges firmware (v1.3.2) és a webes felület elkészült, a maketten lefutottak a funkcionális tesztek. A vízmegtakarítási számok szimulációból származnak, a makett vízfogyasztás-mérése nem készült el.
+**Konzulens:** Sándor Tamás
 
 ## Tartalom
 
