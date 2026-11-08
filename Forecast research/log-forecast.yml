@@ -1,0 +1,27 @@
+name: Log forecasts
+
+on:
+  schedule:
+    - cron: "5 4,16 * * *"   # twice a day (UTC)
+  workflow_dispatch:          # lets you run it manually from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  log:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fetch and append forecasts
+        run: python log_forecast.py
+      - name: Commit the updated log
+        run: |
+          git config user.name "forecast-logger"
+          git config user.email "forecast-logger@users.noreply.github.com"
+          git add forecast_log.csv
+          git commit -m "Log forecasts $(date -u +%Y-%m-%dT%H:%MZ)" || exit 0
+          git push

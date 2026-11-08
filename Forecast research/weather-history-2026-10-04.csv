@@ -1,0 +1,7 @@
+Time,Temperature,Dew Point,Humidity,Wind,Speed,Gust,Pressure,Precip. Rate,Precip. Accum.,UV,Solar
+10/4,26.8°C,9.9°C,95%,SSE,7.9km/h,11.1km/h,1025.43hPa,0mm,0mm,4,480.2w/m²
+10/5,26.9°C,9.9°C,95%,SSE,8.7km/h,13km/h,1021.23hPa,0mm,0mm,4,442.9w/m²
+10/6,28.1°C,10.8°C,94%,S,7.2km/h,11.1km/h,1018.02hPa,0mm,0mm,4,448.1w/m²
+10/7,27.6°C,8°C,94%,ENE,10.5km/h,14.8km/h,1015.04hPa,0mm,0mm,4,414.2w/m²
+10/8,25.2°C,15.7°C,83%,SSE,11.1km/h,18.3km/h,1009.72hPa,0mm,0mm,2,260.2w/m²
+10/9,20.3°C,15.4°C,82%,NNW,13.7km/h,18.3km/h,1014.53hPa,0mm,0mm,6,620.2w/m²
