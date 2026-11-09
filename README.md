@@ -8,7 +8,7 @@ A projekt az Óbudai Egyetem Kandó Kálmán Villamosmérnöki Karán készült 
 
 **Szerzők:** [Nemes Dániel](https://github.com/CITROMOSEPER), [Nyul Balázs](https://github.com/snotor)
 
-**Konzulens:** [Sándor Tamás]((https://uni-obuda.hu/szemely/sandor-tamas/))
+**Konzulens:** [Sándor Tamás](https://uni-obuda.hu/szemely/sandor-tamas/)
 
 ## Tartalom
 
