@@ -19,15 +19,14 @@ A projekt az Óbudai Egyetem Kandó Kálmán Villamosmérnöki Karán készült 
 | [`szimulacio/`](szimulacio/) | A döntési logika Python-szimulációja négy budapesti idényre |
 | [`Áramkör/Öntözőberendezés/`](Áramkör/Öntözőberendezés/) | KiCad kapcsolási rajz és NYÁK-terv, biztonsági mentésekkel |
 | [`Rendszertervek/`](Rendszertervek/) | Az eredeti logikai és fizikai rendszerterv (a koncepció korábbi állapota) |
-| [`Arduino - Irrigation system - final/`](Arduino%20-%20Irrigation%20system%20-%20final/) | A firmware 1.0.0-s állapota (2026. október 31.) |
-| [`Arduino - discontinued/`](Arduino%20-%20discontinued/) | Lezárt első firmware, USB-s kapcsolattal |
-| [`Python App - discontinued/`](Python%20App%20-%20discontinued/) | Lezárt PC-s kezelőprogram az első firmware-hez |
 | [`TDK_dolgozat_ND_NyB.docx`](TDK_dolgozat_ND_NyB.docx) | A TDK-dolgozat |
 | [`TDK_tesztjegyzokonyv_ND_NyB.docx`](TDK_tesztjegyzokonyv_ND_NyB.docx) | Kitöltött tesztjegyzőkönyv a makett vizsgálatairól |
 | [`TDK_szimulacios_jegyzokonyv_ND_NyB.docx`](TDK_szimulacios_jegyzokonyv_ND_NyB.docx) | Szimulációs jegyzőkönyv |
 | [`TDK_MI_nyilatkozat_ND_NyB.docx`](TDK_MI_nyilatkozat_ND_NyB.docx) | Nyilatkozat a mesterséges intelligencia használatáról |
 | [`TDK_bemutato_ND_NyB.docx`](TDK_bemutato_ND_NyB.docx) | A TDK-téma rövid bemutatója |
-| [`Kreatív megoldások – prezentáció.pptx`](Kreatív%20megoldások%20–%20prezentáció.pptx) | A tárgyi előadás diái |
+| [`TDK_prezentacio_ND_NyB.pptx`](TDK_prezentacio_ND_NyB.pptx) | A TDK-előadás diái |
+
+A firmware korábbi változatai (az 1.0.0-s Arduino-firmware, a lezárt első firmware és a hozzá készült PC-s kezelőprogram) a git-előzményekben érhetők el.
 
 ## Funkciók
 
@@ -146,7 +145,3 @@ Az eredmények számított, nem mért értékek:
 - Áramlásmérő nincs: a liter a szivattyúidő és a kimért térfogatáram szorzata.
 - A talajszenzorok közös, közelítő kalibrációval futnak, a százalék relatív nedvességindex.
 - Nincs távoli firmware-frissítés (OTA), és a NYÁK a végleges firmware-hez módosítást igényel.
-
-## Mesterséges intelligencia használata
-
-A firmware, a webes felület és a Python-alkalmazás a Claude Opus 5.5 modell segítségével készült, a dolgozat szövegének nagy része, a szimuláció és a jegyzőkönyvek szintén. A kapcsolási rajzhoz és a nyomtatott áramkörhöz nem használtunk MI-eszközt. A részleteket a dolgozat 12.4. alfejezete és az MI-nyilatkozat tartalmazza.
